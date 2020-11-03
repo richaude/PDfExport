@@ -1,97 +1,116 @@
-from fpdf import FPDF
-import requests
+import fpdf
 import json
-import time
-import sys
+import requests
 import os
+import sys
+import time
+fpdf.set_global("SYSTEM_TTFONTS", os.path.join(os.path.dirname(__file__),'fonts'))
+# using NotoSans from https://www.google.com/get/noto/
+# solution from here: https://stackoverflow.com/a/57360249/12616125 (otherwise there could be a UnicodeEncoding Error, fpdf uses latin-1
+
 
 def getJson(manifest):
-	myJson = requests.get(manifest).content
-	myDict = json.loads(myJson)
-	return myDict
-
-def write(manifest):
-	myDict = getJson(manifest)
-	pdf = FPDF()
-	pdf.add_page()
-	pdf.set_font('Arial', 'B', 16)
-	metadata = myDict['metadata']
-	#headline = metadata[0]['value']
-	headline = myDict['label']
-	pdf.cell(40, 10, headline)
-	pdf.ln(h = '10')
-	pdf.set_font('Arial', '', 12)
-	pdf.cell(40, 10, manifest)
-	pdf.ln(h = '10')
-	attributionL = myDict['attribution'].split("<br/>")
-	for chunk in attributionL:
-		pdf.cell(40, 10, chunk)
-		pdf.ln(h = '10')
-	pdf.cell(40, 10, myDict['license'])
-	pdf.ln(h = '10')
-	makeMeta(metadata, pdf)
-	length = len(myDict['sequences'][0]['canvases'])
-	#print(str(length))
-	merge(pdf, length)
-	# Was dient als prägnanter Dateiname???
-	pdf.output(headline+".pdf", 'F')
+	try:
+		myJson = requests.get(manifest).content
+		#myJson.encode('utf-8')
+		#myJson = myJson.encode('latin-1', 'replace').decode('latin-1')
+		#print(myJson)
+		myDict = json.loads(myJson)
+		return myDict
+	except:
+		print('No valid input.')
+		return None
 	
-def makeMeta(metadata, pdf):
-	pdf.set_font('Arial', 'B', 16)
-	pdf.cell(40, 10, "Metadaten")
+	
+def getImage(imageId, count):
+	url = imageId+'/full/'+width+',/0/default.jpg'
+	with open(str(count)+".jpg", 'wb') as f:
+		f.write(requests.get(url).content)
+
+def writeMeta(metadata, pdf):
+	pdf.set_font('NotoSans', 'B', 16)
+	pdf.cell(40, 10, "Metadata")
 	pdf.ln(h = '10')
-	pdf.set_font('Arial', '', 12)
+	pdf.set_font('NotoSans', '', 12)
 	for entry in metadata:
 		line = entry['label']+": "+entry['value']
 		pdf.cell(40, 10, line)
 		pdf.ln(h = '10')
+	
+def makeFrontpage(manifestDict):
+	pdf = fpdf.FPDF()
+	pdf.add_font("NotoSans", style="", fname="NotoSans-Regular.ttf", uni=True)
+	pdf.add_font("NotoSans", style="B", fname="NotoSans-Bold.ttf", uni=True)
+	pdf.add_font("NotoSans", style="I", fname="NotoSans-Italic.ttf", uni=True)
+	pdf.add_font("NotoSans", style="BI", fname="NotoSans-BoldItalic.ttf", uni=True)
+	#pdf.set_doc_option('core_fonts_encoding', 'utf-8')
+	pdf.add_page()
+	headline = None
+	attributionL = None
+	lizenz = None
+	headline = manifestDict['label']
+	pdf.set_font('NotoSans', 'B', 16)
+	if headline is not None:
+		pdf.multi_cell(180, 10, headline)
+		pdf.ln(h = '10')
+	pdf.set_font('NotoSans', '', 12)
+	pdf.cell(40, 10, manifest)
+	pdf.ln(h = '10')
+	attributionL = manifestDict['attribution'].split("<br/>")
+	if attributionL is not None:
+		for chunk in attributionL:
+			pdf.cell(40, 10, chunk)
+			pdf.ln(h = '10')
+	if lizenz is not None:
+		pdf.cell(40, 10, manifestDict['license'])
+		pdf.ln(h = '10')
+	metadata = None
+	try:
+		metadata = manifestDict['metadata']
+		if metadata is not None:
+			writeMeta(metadata, pdf)
+	except:
+		#if metadata is not None:
+			#writeMeta(metadata, pdf)
+		pass
+	finally:
+		return pdf
 
-def merge(pdf, length):
-	slide = '00000001'
-	count = 0
-	#while slide+".jpg" is not None:
-	while count < length:
-		pdf.add_page()
-		pdf.image(slide+".jpg", x=0, y=0, w=200) # parameter w und h müssen evtl. als Variablen übergeben werden
-		os.remove(slide+".jpg")
-		print("Verarbeite Bild "+str(count+1)+" von "+str(length))
-		slide = str(int(slide) + 1).zfill(len(slide))
-		count += 1
-		
-def getImageLocation(manifest):
-	myDict = getJson(manifest)
-	sequences = myDict['sequences']
+def addImagesToPdf(manifestDict):
+	f = makeFrontpage(manifestDict)
+	sequences = manifestDict['sequences']
 	canvases = sequences[0]['canvases']
-	i=1
+	count = 1
 	for canvas in canvases:
 		imageId = canvas['images'][0]['resource']['service']['@id']
-		#print(imageId)
-		print("Lade Bild "+str(i)+" von "+str(len(canvases)))
-		i+=1
-		getImage(getImageLink(imageId))
-		
-def getImageLink(imageId):
-	imageLink = namespace+imageId[35:]+'/full/'+pixelbreite+'/0/default.jpg'
-	#print(imageLink)
-	return imageLink
-	
-def getSlideNumber(url):
-	hinteresEnde = 24+len(pixelbreite)
-	slideNumber = url[83:-hinteresEnde]
-	return slideNumber
-	
-def getImage(url):
-	slideNumber = getSlideNumber(url)
-	with open(slideNumber+".jpg", 'wb') as f:
-		f.write(requests.get(url).content)
+		getImage(imageId, count)
+		print('Processing image '+str(count)+' of '+str(len(canvases)))
+		f.add_page()
+		f.image(str(count)+'.jpg', x=0, y=0, w=200) # w might need to get adapted
+		os.remove(str(count)+'.jpg')
+		count += 1
+	title = manifestDict['label']
+	#pdf.output(dest='S').encode('latin-1','ignore')
+	f.output(title+".pdf", 'F')
 
-manifest = sys.argv[1]
-pixelbreite = "1000," # wenn w bei 100, dann ist 500 besser, wenn w bei 200, dann 1000
-namespace = 'https://iiif.ub.uni-leipzig.de/fcgi-bin/iipsrv.fcgi?iiif='
 
 start = time.time()
-getImageLocation(manifest)
-write(manifest)
+manifest = None
+width = None
+manifest = sys.argv[1] # the manifest.json url
+width = sys.argv[2] # width of the image in pixels
+if manifest is not None: 
+	manifestDict = getJson(manifest)
+	#print(manifestDict)
+	if width is not None:
+		addImagesToPdf(manifestDict)
+	else:
+		print('No width provided! Using a default width of 1000 pixels.')
+		width = "1000"
+		addImagesToPdf(manifestDict)
+else:
+	print('No Json-Manifest provided!')
 end = time.time()
-print("Laufzeit: "+str(end - start)+" Sekunden.")
+print('Time used: '+str(end - start)+' seconds.')
 
+	
