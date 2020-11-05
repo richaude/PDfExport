@@ -193,23 +193,6 @@ if len(sys.argv) == 6:
 	endPage = sys.argv[5] # ending page
 	customPageNumbers(manifestDict, int(startPage), int(endPage))
 	
-
-#if manifest is not None: 
-	#manifestDict = getJson(manifest)
-	#print(manifestDict)
-	#if width is not None:
-		#addImagesToPdf(manifestDict)
-		#pdf = makeFrontpage(manifestDict)
-		#title = manifestDict['label']
-		#pdf.output(title+".pdf", 'F')
-		#getRange(manifestDict, rangeId)
-		#customPageNumbers(manifestDict, int(startPage), int(endPage))
-	#else:
-		#print('No width provided! Using a default width of 1000 pixels.')
-		#width = "1000"
-		#addImagesToPdf(manifestDict)
-#else:
-	#print('No Json-Manifest provided!')
 end = time.time()
 print('Time used: '+str(end - start)+' seconds.')
 
