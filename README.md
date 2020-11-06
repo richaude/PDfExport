@@ -20,6 +20,6 @@ where manifest.json is the url to your iiif object and width is a number, ideall
 ```python merge.py "manifest.json" "width" "rangeId"```  
 where rangeId is the url to a range (for example ```https://iiif.ub.uni-leipzig.de/0000030884/range/LOG_0006```)
 ### Download a custom section of pages  
-```python merge.py "manifest.json" "width" "range" startpage endpage```  
+```python merge.py "manifest.json" "width" startpage endpage```  
 
-where startpage and endpage are the equivalent page numbers you want the document to start and to end with (don't have to be entered as strings). Note that as of now the "range" doesn't play any role in this option, but has to be entered as literally any value.
+where startpage and endpage are the equivalent page numbers you want the document to start and to end with (both inclusive). The values for startpage and endpage don't have to be put in quotation marks.
