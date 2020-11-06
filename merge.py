@@ -77,6 +77,7 @@ def makeFrontpage(manifestDict, label):
 		pdf.multi_cell(180, 10, headline)
 		#pdf.ln(h = '10')
 	if label != '':
+		pdf.set_font('NotoSans', 'B', 16)
 		pdf.multi_cell(180, 10, label)
 	pdf.set_font('NotoSans', '', 12)
 	pdf.cell(40, 10, manifest)
@@ -114,6 +115,7 @@ def addImagesToPdf(manifestDict):
 		count += 1
 	title = manifestDict['label']
 	#pdf.output(dest='S').encode('latin-1','ignore')
+	print('Processing file...')
 	f.output(title+'.pdf', 'F')
 	
 def getImageIdRange(manifestDict, canvasId):
@@ -147,6 +149,7 @@ def getRange(manifestDict, rangeId):
 					os.remove(str(count)+'.jpg')
 					count += 1
 				title = manifestDict['label'] + structure['label']
+				print('Processing file...')
 				f.output(title+'.pdf', 'F')
 
 def customPageNumbers(manifestDict, start, end):
@@ -163,37 +166,39 @@ def customPageNumbers(manifestDict, start, end):
 		f.image(str(count)+'.jpg', x=0, y=0, w=200) # w might need to get adapted
 		os.remove(str(count)+'.jpg')
 		count += 1
-	title = manifestDict['label']+',pages'str(start)+'-'+str(end)
+	title = manifestDict['label']+',pages'+str(start)+'-'+str(end)
+	print('Processing file...')
 	f.output(title+'.pdf', 'F')
 				
 
 
 start = time.time()
-manifest = None
-width = None
-manifest = sys.argv[1] # the manifest.json url
-width = sys.argv[2] # width of the image in pixels
-manifestDict = getJson(manifest)
 
-if len(sys.argv) == 3:
-	if width is not None:
+if len(sys.argv) >= 1:
+	manifest = sys.argv[1] # the manifest.json url
+	manifestDict = getJson(manifest)
+
+	if len(sys.argv) == 2:
+		print('No width provided! Using a default width of 1000 pixels.')
+		width = '1000'
 		addImagesToPdf(manifestDict)
 	else:
-		print('No width provided! Using a default width of 1000 pixels.')
-		width = "1000"
-		addImagesToPdf(manifestDict)
+		width = sys.argv[2] # width of the image in pixels
 
-if len(sys.argv) == 4:
-	rangeId = sys.argv[3] # ID of a range like "https://iiif.ub.uni-leipzig.de/0000030884/range/LOG_0011"
-	getRange(manifestDict, rangeId)
-	
-if len(sys.argv) == 6:
-	# rangeId has to be passed blindly as sys.argv[3] - can be any string
-	startPage = sys.argv[4] # starting page
-	endPage = sys.argv[5] # ending page
-	customPageNumbers(manifestDict, int(startPage), int(endPage))
+		if len(sys.argv) == 3:
+			addImagesToPdf(manifestDict)
+
+
+		if len(sys.argv) == 4:
+			rangeId = sys.argv[3] # ID of a range like "https://iiif.ub.uni-leipzig.de/0000030884/range/LOG_0011"
+			getRange(manifestDict, rangeId)
+			
+		if len(sys.argv) == 5:
+			startPage = sys.argv[3] # starting page of your custom section
+			endPage = sys.argv[4] # ending page
+			customPageNumbers(manifestDict, int(startPage), int(endPage))
+else:
+	print('No Json provided!')
 	
 end = time.time()
-print('Time used: '+str(end - start)+' seconds.')
-
-	
+print('Done! Time used: '+str(end - start)+' seconds.')
