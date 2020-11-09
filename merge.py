@@ -156,19 +156,22 @@ def customPageNumbers(manifestDict, start, end):
 	f = makeFrontpage(manifestDict, '- pages '+str(start)+' to '+str(end))
 	sequences = manifestDict['sequences']
 	canvases = sequences[0]['canvases']
-	canvasSlice = canvases[start-1:end]
-	count = 1
-	for canvas in canvasSlice:
-		imageId = canvas['images'][0]['resource']['service']['@id']
-		getImage(imageId, count)
-		print('Processing image '+str(count)+' of '+str(len(canvasSlice)))
-		f.add_page()
-		f.image(str(count)+'.jpg', x=0, y=0, w=200) # w might need to get adapted
-		os.remove(str(count)+'.jpg')
-		count += 1
-	title = manifestDict['label']+',pages'+str(start)+'-'+str(end)
-	print('Processing file...')
-	f.output(title+'.pdf', 'F')
+	if start > len(canvases) or end > len(canvases):
+		print("The numbers you have entered are too high for the specified document.")
+	else:
+		canvasSlice = canvases[start-1:end]
+		count = 1
+		for canvas in canvasSlice:
+			imageId = canvas['images'][0]['resource']['service']['@id']
+			getImage(imageId, count)
+			print('Processing image '+str(count)+' of '+str(len(canvasSlice)))
+			f.add_page()
+			f.image(str(count)+'.jpg', x=0, y=0, w=200) # w might need to get adapted
+			os.remove(str(count)+'.jpg')
+			count += 1
+		title = manifestDict['label']+',pages'+str(start)+'-'+str(end)
+		print('Processing file...')
+		f.output(title+'.pdf', 'F')
 				
 
 
@@ -194,11 +197,20 @@ if len(sys.argv) >= 1:
 			getRange(manifestDict, rangeId)
 			
 		if len(sys.argv) == 5:
-			startPage = sys.argv[3] # starting page of your custom section
-			endPage = sys.argv[4] # ending page
-			customPageNumbers(manifestDict, int(startPage), int(endPage))
+			try:
+				startPage = int(sys.argv[3]) # starting page of your custom section
+				endPage = int(sys.argv[4]) # ending page
+				if startPage > endPage:
+					print("The starting page can't have a higher value than the ending page!")
+				else:
+					customPageNumbers(manifestDict, startPage, endPage)
+			except:
+				print("No valid numbers for the pages have been entered!")
 else:
 	print('No Json provided!')
 	
 end = time.time()
 print('Done! Time used: '+str(end - start)+' seconds.')
+
+# Jsons for testing:
+# https://iiif.ub.uni-leipzig.de/0000000001/manifest.json (https://papyrusebers.de/)
