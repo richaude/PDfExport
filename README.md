@@ -22,4 +22,13 @@ where rangeId is the url to a range (for example ```https://iiif.ub.uni-leipzig.
 ### Download a custom section of pages  
 ```python merge.py "manifest.json" "width" startpage endpage```  
 
-where startpage and endpage are the equivalent page numbers you want the document to start and to end with (both inclusive). The values for startpage and endpage don't have to be put in quotation marks.
+where startpage and endpage are the equivalent page numbers you want the document to start and to end with (both inclusive). The values for startpage and endpage don't have to be put in quotation marks.  
+### Example commands
++ To download the whole pdf of for example https://iiif.ub.uni-leipzig.de/0000030913/manifest.json with an image width of 1000 pixels, do:  
+```python merge.py "https://iiif.ub.uni-leipzig.de/0000030913/manifest.json" "1000"```    
+
++ To download a pdf of the "Einleitung", which is the range with the ID *https://iiif.ub.uni-leipzig.de/0000030913/range/LOG_0004*, with an image width of 1000 pixels, do:  
+```python merge.py "https://iiif.ub.uni-leipzig.de/0000030913/manifest.json" "1000" "https://iiif.ub.uni-leipzig.de/0000030913/range/LOG_0004"```  
+
++ To download a custom section of pages as pdf, say from page 14 to page 21, with an image width of 900 pixels do:  
+```python merge.py "https://iiif.ub.uni-leipzig.de/0000030913/manifest.json" "900" 14 21```
