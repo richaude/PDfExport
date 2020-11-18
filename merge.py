@@ -5,8 +5,10 @@ import os
 import sys
 import time
 from bs4 import BeautifulSoup
-# pip install beautifulsoup4
-# pip install lxml
+from PIL import Image
+# python3 -m pip install --upgrade pip
+# python3 -m pip install --upgrade Pillow
+
 fpdf.set_global("SYSTEM_TTFONTS", os.path.join(os.path.dirname(__file__),'fonts'))
 # using NotoSans from https://www.google.com/get/noto/
 # solution from here: https://stackoverflow.com/a/57360249/12616125 (otherwise there could be a UnicodeEncoding Error, fpdf uses latin-1
@@ -25,7 +27,7 @@ def getJson(manifest):
 		return None
 	
 	
-def getImage(imageId, count):
+def getImage(imageId, count, width):
 	url = imageId+'/full/'+width+',/0/default.jpg'
 	with open(str(count)+'.jpg', 'wb') as f:
 		f.write(requests.get(url).content)
@@ -100,17 +102,24 @@ def makeFrontpage(manifestDict, label):
 	finally:
 		return pdf
 
-def addImagesToPdf(manifestDict):
+def addImagesToPdf(manifestDict, width):
 	f = makeFrontpage(manifestDict, '')
 	sequences = manifestDict['sequences']
 	canvases = sequences[0]['canvases']
 	count = 1
 	for canvas in canvases:
 		imageId = canvas['images'][0]['resource']['service']['@id']
-		getImage(imageId, count)
+		getImage(imageId, count, width)
 		print('Processing image '+str(count)+' of '+str(len(canvases)))
-		f.add_page()
-		f.image(str(count)+'.jpg', x=0, y=0, w=200) # w might need to get adapted
+		imageName = str(count)+'.jpg'
+		form = imageSizing(imageName)
+		imageWidth = form[0]
+		imageHeight = form[1]
+		orientation = form[2]
+		marginWidth = form[3]
+		marginHeight = form[4]
+		f.add_page(orientation)
+		f.image(imageName, marginWidth, marginHeight, imageWidth, imageHeight)
 		os.remove(str(count)+'.jpg')
 		count += 1
 	title = manifestDict['label']
@@ -131,7 +140,7 @@ def getImageIdRange(manifestDict, canvasId):
 	return imageId
 	
 	
-def getRange(manifestDict, rangeId):
+def getRange(manifestDict, rangeId, width):
 	sequences = manifestDict['sequences']
 	structures = manifestDict['structures']
 	for structure in structures:
@@ -142,17 +151,24 @@ def getRange(manifestDict, rangeId):
 				count = 1
 				for canvas in structure['canvases']:
 					imageId = getImageIdRange(manifestDict, canvas)
-					getImage(imageId, count)
+					getImage(imageId, count, width)
 					print('Processing image '+str(count)+' of '+str(len(structure['canvases'])))
-					f.add_page()
-					f.image(str(count)+'.jpg', x=0, y=0, w=200) # Mind the parameter w!
+					imageName = str(count)+'.jpg'
+					form = imageSizing(imageName)
+					imageWidth = form[0]
+					imageHeight = form[1]
+					orientation = form[2]
+					marginWidth = form[3]
+					marginHeight = form[4]
+					f.add_page(orientation)
+					f.image(imageName, marginWidth, marginHeight, imageWidth, imageHeight)
 					os.remove(str(count)+'.jpg')
 					count += 1
 				title = manifestDict['label'] + structure['label']
 				print('Processing file...')
 				f.output(title+'.pdf', 'F')
 
-def customPageNumbers(manifestDict, start, end):
+def customPageNumbers(manifestDict, start, end, width):
 	f = makeFrontpage(manifestDict, '- pages '+str(start)+' to '+str(end))
 	sequences = manifestDict['sequences']
 	canvases = sequences[0]['canvases']
@@ -163,15 +179,58 @@ def customPageNumbers(manifestDict, start, end):
 		count = 1
 		for canvas in canvasSlice:
 			imageId = canvas['images'][0]['resource']['service']['@id']
-			getImage(imageId, count)
+			getImage(imageId, count, width)
 			print('Processing image '+str(count)+' of '+str(len(canvasSlice)))
-			f.add_page()
-			f.image(str(count)+'.jpg', x=0, y=0, w=200) # w might need to get adapted
+			imageName = str(count)+'.jpg'
+			form = imageSizing(imageName)
+			imageWidth = form[0]
+			imageHeight = form[1]
+			orientation = form[2]
+			marginWidth = form[3]
+			marginHeight = form[4]
+			f.add_page(orientation)
+			f.image(imageName, marginWidth, marginHeight, imageWidth, imageHeight)
 			os.remove(str(count)+'.jpg')
 			count += 1
 		title = manifestDict['label']+',pages'+str(start)+'-'+str(end)
 		print('Processing file...')
 		f.output(title+'.pdf', 'F')
+		
+def imageSizing(imageName):
+    # from https://stackoverflow.com/questions/43767328/python-fpdf-not-sizing-correctly
+	cover = Image.open(imageName)
+	width, height = cover.size
+
+    # convert pixel in mm with 1px=0.264583 mm
+	width, height = float(width * 0.264583), float(height * 0.264583)
+
+    # given we are working with A4 format size 
+	pdf_size = {'P': {'w': 210, 'h': 297}, 'L': {'w': 297, 'h': 210}}
+
+    # get page orientation from image size 
+	orientation = 'P' if width < height else 'L'
+
+    #  make sure image size is not greater than the pdf format size
+	width = width if width < pdf_size[orientation]['w'] else pdf_size[orientation]['w']
+	height = height if height < pdf_size[orientation]['h'] else pdf_size[orientation]['h']
+	
+	marginHeight = 0
+	marginWidth = 0
+	
+	# if the height of an image is less than a4, center the image vertically
+	if height < pdf_size[orientation]['h']:
+		# creating upper and bottom margin
+		marginHeight = (pdf_size[orientation]['h'] - height) / 2.0
+		
+	# same with the width
+	if width < pdf_size[orientation]['w']:
+		marginWidth = (pdf_size[orientation]['w'] - width) / 2.0
+   
+	return [width, height, orientation, marginWidth, marginHeight]
+   
+
+
+    
 				
 
 
@@ -184,17 +243,17 @@ if len(sys.argv) >= 1:
 	if len(sys.argv) == 2:
 		print('No width provided! Using a default width of 1000 pixels.')
 		width = '1000'
-		addImagesToPdf(manifestDict)
+		addImagesToPdf(manifestDict, width)
 	else:
 		width = sys.argv[2] # width of the image in pixels
 
 		if len(sys.argv) == 3:
-			addImagesToPdf(manifestDict)
+			addImagesToPdf(manifestDict, width)
 
 
 		if len(sys.argv) == 4:
 			rangeId = sys.argv[3] # ID of a range like "https://iiif.ub.uni-leipzig.de/0000030884/range/LOG_0011"
-			getRange(manifestDict, rangeId)
+			getRange(manifestDict, rangeId, width)
 			
 		if len(sys.argv) == 5:
 			try:
@@ -203,7 +262,7 @@ if len(sys.argv) >= 1:
 				if startPage > endPage:
 					print("The starting page can't have a higher value than the ending page!")
 				else:
-					customPageNumbers(manifestDict, startPage, endPage)
+					customPageNumbers(manifestDict, startPage, endPage, width)
 			except:
 				print("No valid numbers for the pages have been entered!")
 else:
