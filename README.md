@@ -6,8 +6,6 @@ Python 3 is required.
 ```python3 -m pip install --upgrade pip```  
 ```python3 -m pip install --upgrade Pillow```  
 ```pip install requests```  
-```pip install beautifulsoup4```  
-```pip install lxml```  
 ```pip install fpdf```
 ## Execute it
 Currently, the .jpg files will temporarily be in the same directory as the script. It is supposed to work for every manifest.json that follows the iiif standard, so the value of this variable can be as you like (as long as it is still a valid manifest.json, of course). For utf-8 encoding you need to have the ```fonts``` folder in this repository (as it is here).  
