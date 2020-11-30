@@ -4,7 +4,6 @@ import requests
 import os
 import sys
 import time
-from bs4 import BeautifulSoup
 from PIL import Image
 # python3 -m pip install --upgrade pip
 # python3 -m pip install --upgrade Pillow
@@ -31,18 +30,6 @@ def getImage(imageId, count, width):
 	url = imageId+'/full/'+width+',/0/default.jpg'
 	with open(str(count)+'.jpg', 'wb') as f:
 		f.write(requests.get(url).content)
-		
-def checkHtml(entry):
-	soup = BeautifulSoup(entry, 'lxml')
-	links = soup.find_all('a')
-	if len(links) == 1:
-		entry = ''
-		for a in links:
-			entry += a.text
-		return [entry, a['href']] # if there is one link in the entry, we give back the text of the link and the url
-	else:
-		return [entry]
-	# can be expanded for other html tags as well
 
 
 def writeMeta(metadata, pdf):
@@ -51,45 +38,44 @@ def writeMeta(metadata, pdf):
 	pdf.ln(h = '10')
 	pdf.set_font('NotoSans', '', 12)
 	for entry in metadata:
-		checked = checkHtml(entry['value'])
-		if len(checked) == 2: # if there is one link, we leave the label as it is, but turn the value into a link, the text of the link shows in the document, but it points to the url 
-			pdf.cell(40, 10, entry['label']+': ')
-			pdf.set_text_color(0, 0, 255)
-			pdf.cell(40, 10, checked[0], link = checked[1])
-			pdf.set_text_color(0, 0, 0)
-			pdf.ln(h = '10')
-		else:
-			line = entry['label']+': '+checked[0]
-			pdf.multi_cell(180, 10, line)
+		pdf.multi_cell(180, 10, entry['label']+': '+entry['value'])
 	
 def makeFrontpage(manifestDict, label):
 	pdf = fpdf.FPDF()
+	#pdf.set_doc_option('core_fonts_encoding', 'utf-8')
 	pdf.add_font('NotoSans', style='', fname='NotoSans-Regular.ttf', uni=True)
 	pdf.add_font('NotoSans', style='B', fname='NotoSans-Bold.ttf', uni=True)
-	pdf.add_font('NotoSans', style='I', fname='NotoSans-Italic.ttf', uni=True)
-	pdf.add_font('NotoSans', style='BI', fname='NotoSans-BoldItalic.ttf', uni=True)
-	#pdf.set_doc_option('core_fonts_encoding', 'utf-8')
+	#pdf.add_font('NotoSans', style='I', fname='NotoSans-Italic.ttf', uni=True)
+	#pdf.add_font('NotoSans', style='BI', fname='NotoSans-BoldItalic.ttf', uni=True)
 	pdf.add_page()
+	description = None
 	headline = None
 	attributionL = None
 	lizenz = None
+	description = manifestDict['description']
 	headline = manifestDict['label']
+	#print("headline: "+headline)
 	pdf.set_font('NotoSans', '', 16)
 	if headline is not None:
 		pdf.multi_cell(180, 10, headline)
 		#pdf.ln(h = '10')
 	if label != '':
+		print("label: "+label)
 		pdf.set_font('NotoSans', 'B', 16)
 		pdf.multi_cell(180, 10, label)
 	pdf.set_font('NotoSans', '', 12)
 	pdf.cell(40, 10, manifest)
 	pdf.ln(h = '10')
+	if description is not None:
+		pdf.multi_cell(180, 10, description)
 	attributionL = manifestDict['attribution'].split('<br/>')
 	if attributionL is not None:
 		for chunk in attributionL:
+			#print("Attribution: "+chunk)
 			pdf.multi_cell(180, 10, chunk)
 			#pdf.ln(h = '10')
 	if lizenz is not None:
+		print("Lizenz: "+lizenz)
 		pdf.multi_cell(180, 10, manifestDict['license'])
 		#pdf.ln(h = '10')
 	metadata = None
@@ -272,4 +258,5 @@ end = time.time()
 print('Done! Time used: '+str(end - start)+' seconds.')
 
 # Jsons for testing:
-# https://iiif.ub.uni-leipzig.de/0000000001/manifest.json (https://papyrusebers.de/)
+# https://iiif.ub.uni-leipzig.de/0000000001/manifest.json (https://papyrusebers.de/), wegen Proportionen
+# https://iiif.bodleian.ox.ac.uk/iiif/manifest/e800b13a-6699-49ae-9bc2-c9b8c35b7a25.json, wegen Kodierung der Metadaten und den Html Tags
